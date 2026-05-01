@@ -119,9 +119,57 @@ User submits: { email, password }
 // Sign a token
 signToken({ userId, tenantId, role }) → JWT string
 
-// Verify a token (future use for protected routes)
+// Verify a token (used by protected-route middleware)
 verifyToken(token) → { userId, tenantId, role, iat, exp }
 ```
+
+---
+
+## Protected routes, tenant context, and RBAC
+
+### Overview
+
+After login, the client sends `Authorization: Bearer <jwt>` on every API call. Protected handlers use:
+
+1. **`authenticate`** — Verifies the JWT and sets `request.auth` with `{ userId, tenantId, role }`. The tenant boundary for data access **must** come from this object (never from client-supplied body/query for scoping).
+2. **`requireRoles('admin', …)`** — Fastify `preHandler` that returns **403** if `request.auth.role` is not in the allowed list.
+
+**Locations:**
+
+- Request typing: [backend/src/types/fastify.d.ts](../backend/src/types/fastify.d.ts)
+- Middleware: [backend/src/middleware/auth.ts](../backend/src/middleware/auth.ts)
+- Example routes: [backend/src/routes/me.ts](../backend/src/routes/me.ts)
+
+### Routes (authenticated)
+
+| Method | Path | preHandler | Description |
+|--------|------|------------|-------------|
+| `GET` | `/api/me` | `authenticate` | Returns current **active** user and tenant from DB (validates JWT user still exists and tenant is active). |
+| `GET` | `/api/admin/tenant` | `authenticate`, `requireRoles('admin')` | Full tenant row for the JWT’s `tenantId` — **admin only**; waiters receive `403`. |
+
+Public routes remain under `/api/auth/*` (no Bearer token).
+
+### Frontend: session check and role-based nav
+
+- **`getMe()`** — [frontend/src/services/api.ts](../frontend/src/services/api.ts) calls `GET /api/me` so the UI can refresh `tenant` / `user` from the server and detect invalid/expired tokens (**401** clears local storage).
+- **Sidebar** — [frontend/src/components/layout/Sidebar.tsx](../frontend/src/components/layout/Sidebar.tsx) shows sections by `role` (`admin` sees Dashboard, Staff, Reports, Settings; `waiter` sees Orders, Tables, Menu — no Dashboard; `kitchen` sees Orders only). Driven by [navByRole.ts](../frontend/src/constants/navByRole.ts). This is **UX only**; the API must enforce RBAC on every sensitive endpoint.
+- **Section guard** — [frontend/src/App.tsx](../frontend/src/App.tsx) resets the active section if the current role is not allowed to view it (e.g. stale tabs).
+
+### cURL examples
+
+```bash
+# Current user (any valid role)
+curl -s http://localhost:4000/api/me \
+  -H "Authorization: Bearer YOUR_JWT"
+
+# Tenant details (admin only)
+curl -s http://localhost:4000/api/admin/tenant \
+  -H "Authorization: Bearer YOUR_JWT"
+```
+
+### Testing a non-admin role
+
+Sign up creates an **admin** user. To try waiter UI/API behavior locally, update the user in the database, e.g. set `role = 'waiter'` for that row in `User`, then log in again (or refresh after `getMe()` syncs role from DB if you only changed the DB).
 
 ---
 
@@ -153,7 +201,7 @@ comparePassword(password, hash) → boolean
 **What it does:**
 - Creates an Axios instance pointed at the backend
 - Automatically injects the JWT token in every request header
-- Handles auth requests (signup, login)
+- Handles auth requests (signup, login) and `getMe()` for session validation
 
 ```typescript
 // Every outgoing request gets:
@@ -200,10 +248,11 @@ logout()              // Clear auth (localStorage removal)
 
 **Location:** [frontend/src/App.tsx](../frontend/src/App.tsx)
 
-**On mount:**
-- Loads saved auth state from localStorage
-- If auth exists, shows welcome screen + logout button
-- If no auth, shows login/signup forms
+**On mount (when a token exists):**
+1. Calls `getMe()` to validate the JWT against `GET /api/me`
+2. On success, refreshes stored `tenant` and `user` (including `role`) from the server
+3. On **401**, clears auth and returns to login
+4. Resets the active sidebar section if the user’s role may not view it
 
 ---
 
@@ -299,10 +348,13 @@ VITE_API_URL=http://localhost:4000/api
 - [x] Tenant ID extracted from JWT (can't be spoofed by client)
 - [x] CORS configured to allow frontend origin
 - [x] Environment variables for secrets (not hardcoded)
+- [x] Protected routes verify JWT; role-gated routes enforce RBAC (`requireRoles`)
+- [x] `/api/me` re-validates user + tenant active state in the database
 - [ ] HTTPS in production
 - [ ] Rate limiting on auth endpoints
 - [ ] Account lockout after N failed login attempts
 - [ ] Email verification for signup
+- [ ] Prisma tenant-scoped client extension (auto-inject `tenantId` on all queries)
 
 ---
 
@@ -342,25 +394,34 @@ curl -X POST http://localhost:4000/api/auth/login \
 
 **Same response structure as signup.**
 
-### 3. Test Protected Route (future)
-
-Once we add middleware, protected routes will require:
+### 3. Test Protected Route — current user
 
 ```bash
-curl -X GET http://localhost:4000/api/tables \
+curl -X GET http://localhost:4000/api/me \
   -H "Authorization: Bearer eyJ..."
 ```
+
+**Expected:** JSON with `tenant` and `user` (or **401** if token invalid/expired).
+
+### 4. Test Admin-only route
+
+```bash
+curl -X GET http://localhost:4000/api/admin/tenant \
+  -H "Authorization: Bearer eyJ..."
+```
+
+**Expected:** Tenant payload for **admin** JWT; **403** for `waiter` / `kitchen` roles.
 
 ---
 
 ## Next Steps
 
-1. **Tenant Middleware** — Auto-inject `tenantId` into all queries
-2. **Protected Routes** — Verify JWT and role on each endpoint
-3. **RBAC Enforcement** — Restrict routes by role (admin, waiter, kitchen)
-4. **Session Management** — Refresh tokens, logout invalidation
-5. **Email Verification** — Confirm email on signup
-6. **Password Reset** — Allow users to reset forgotten passwords
+1. **Prisma tenant extension** — Auto-inject `tenantId` into all queries and creates (see Multi-Tenancy section)
+2. **Tables / menu / orders APIs** — Use `authenticate` + `requireRoles` per route; always scope by `request.auth.tenantId`
+3. **Staff management** — Admin-only CRUD for `User` rows (e.g. create waiter accounts) instead of manual SQL
+4. **Session hardening** — Refresh tokens, optional server-side blocklist for logout
+5. **Email verification** — Confirm email on signup
+6. **Password reset** — Allow users to reset forgotten passwords
 
 ---
 
@@ -370,35 +431,47 @@ curl -X GET http://localhost:4000/api/tables \
 backend/
 ├── src/
 │   ├── routes/
-│   │   └── auth.ts              ← Signup & login endpoints
+│   │   ├── auth.ts             ← Signup & login
+│   │   └── me.ts               ← GET /me, GET /admin/tenant (protected)
+│   ├── middleware/
+│   │   └── auth.ts             ← authenticate, requireRoles
+│   ├── types/
+│   │   └── fastify.d.ts        ← request.auth typing
 │   ├── lib/
-│   │   ├── jwt.ts               ← JWT signing/verification
-│   │   ├── hash.ts              ← Password hashing
-│   │   └── prisma.ts            ← Database client
-│   └── server.ts                ← Fastify app setup
+│   │   ├── jwt.ts              ← JWT signing/verification
+│   │   ├── hash.ts             ← Password hashing
+│   │   └── prisma.ts           ← Database client
+│   └── server.ts               ← Fastify app setup
 ├── prisma/
-│   └── schema.prisma            ← Database schema
-└── .env                         ← Database & JWT secrets
+│   └── schema.prisma           ← Database schema
+└── .env                        ← Database & JWT secrets
 
 frontend/
 ├── src/
 │   ├── modules/
-│   │   └── auth/
-│   │       ├── Login.tsx         ← Login form component
-│   │       └── SignUp.tsx        ← Signup form component
+│   │   ├── auth/
+│   │   │   ├── Login.tsx
+│   │   │   └── SignUp.tsx
+│   │   └── dashboard/
+│   │       └── Dashboard.tsx
+│   ├── components/
+│   │   └── layout/
+│   │       ├── Sidebar.tsx     ← Role-based nav
+│   │       └── Header.tsx
+│   ├── constants/
+│   │   └── navByRole.ts        ← Role → allowed sidebar ids
 │   ├── services/
-│   │   └── api.ts               ← Axios client with auth interceptor
+│   │   └── api.ts              ← Axios + signup, login, getMe
 │   ├── store/
-│   │   └── authStore.ts         ← localStorage auth state
-│   └── App.tsx                  ← Root component with auth logic
-└── .env                         ← Backend API URL
-
+│   │   └── authStore.ts
+│   └── App.tsx                 ← Auth, session refresh, section guard
+└── .env
 ```
 
 
 ---
 
-**Last Updated:** April 12, 2026  
-**Status:** MVP Complete — Ready for extended features
+**Last Updated:** May 1, 2026  
+**Status:** Auth + protected APIs + RBAC pattern + role-aware UI — ready for domain APIs (tables, menu, orders)
 
 

@@ -8,13 +8,25 @@ import { SignUpForm } from './modules/auth/SignUp'
 import { Sidebar } from './components/layout/Sidebar'
 import { Header } from './components/layout/Header'
 import { Dashboard } from './modules/dashboard/Dashboard'
+import { Staff } from './modules/staff/Staff'
+import { Tables } from './modules/tables/Tables'
+import { MenuPage } from './modules/menu/MenuPage'
+import { Orders } from './modules/orders/Orders'
+import { Reports } from './modules/reports/Reports'
+import { Settings } from './modules/settings/Settings'
+import { NAV_IDS_BY_ROLE, firstSectionForRole } from './constants/navByRole'
 
 type Page = 'login' | 'signup'
+
+function initialActiveSection(): string {
+  const a = getAuthData()
+  return a ? firstSectionForRole(a.user.role) : 'dashboard'
+}
 
 function App() {
   const [auth, setAuth]               = useState<AuthData | null>(getAuthData())
   const [page, setPage]               = useState<Page>('login')
-  const [activeSection, setSection]   = useState('dashboard')
+  const [activeSection, setSection]   = useState(initialActiveSection)
 
   useEffect(() => {
     setAuth(getAuthData())
@@ -52,18 +64,15 @@ function App() {
   // Keep the active section within what this role may access (UX mirror of RBAC).
   useEffect(() => {
     if (!auth) return
-    const byRole: Record<string, string[]> = {
-      admin: ['dashboard', 'orders', 'tables', 'menu', 'staff', 'reports', 'settings'],
-      waiter: ['dashboard', 'orders', 'tables', 'menu'],
-      kitchen: ['dashboard', 'orders'],
-    }
-    const allowed = new Set(byRole[auth.user.role] ?? byRole.waiter)
+    const allowedIds = NAV_IDS_BY_ROLE[auth.user.role] ?? NAV_IDS_BY_ROLE.waiter
+    const allowed = new Set(allowedIds)
+    const fallback = firstSectionForRole(auth.user.role)
     if (activeSection === 'settings' && auth.user.role !== 'admin') {
-      setSection('dashboard')
+      setSection(fallback)
       return
     }
     if (!allowed.has(activeSection)) {
-      setSection('dashboard')
+      setSection(fallback)
     }
   }, [auth, activeSection])
 
@@ -74,7 +83,11 @@ function App() {
   }
 
   function handleAuthSuccess() {
-    setAuth(getAuthData())
+    const next = getAuthData()
+    setAuth(next)
+    if (next) {
+      setSection(firstSectionForRole(next.user.role))
+    }
   }
 
   // ── Authenticated: full dashboard layout ────────────────────
@@ -87,9 +100,23 @@ function App() {
           <Header auth={auth} activeSection={activeSection} onLogout={handleLogout} />
 
           <main className="flex-1 overflow-y-auto">
-            {activeSection === 'dashboard' && <Dashboard auth={auth} />}
+            {activeSection === 'dashboard' && (
+              <Dashboard auth={auth} onNavigate={setSection} />
+            )}
+            {activeSection === 'staff' && <Staff />}
+            {activeSection === 'tables' && <Tables role={auth.user.role} />}
+            {activeSection === 'menu' && <MenuPage role={auth.user.role} />}
+            {activeSection === 'orders' && <Orders role={auth.user.role} />}
+            {activeSection === 'reports' && <Reports />}
+            {activeSection === 'settings' && <Settings />}
 
-            {activeSection !== 'dashboard' && (
+            {activeSection !== 'dashboard' &&
+              activeSection !== 'staff' &&
+              activeSection !== 'tables' &&
+              activeSection !== 'menu' &&
+              activeSection !== 'orders' &&
+              activeSection !== 'reports' &&
+              activeSection !== 'settings' && (
               <div className="p-6 max-w-7xl">
                 <div className="bg-white rounded-lg shadow-card p-12 text-center">
                   <p className="text-slate-400 text-sm font-medium capitalize">

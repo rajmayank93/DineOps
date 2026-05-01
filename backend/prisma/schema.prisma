@@ -8,13 +8,17 @@ generator client {
 }
 
 model Tenant {
-  id         String   @id @default(uuid())
-  name       String
-  ownerEmail String   @unique
-  tier       String   @default("free")
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  users      User[]
+  id               String             @id @default(uuid())
+  name             String
+  ownerEmail       String             @unique
+  tier             String             @default("free")
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  users            User[]
+  restaurantTables RestaurantTable[]
+  menu             Menu?
+  menuItems        MenuItem[]
+  orders           Order[]
 }
 
 model User {
@@ -26,7 +30,86 @@ model User {
   role         String   @default("admin")
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
+  ordersPlaced Order[]  @relation("PlacedOrders")
 
   @@unique([tenantId, email])
   @@index([tenantId])
+}
+
+/// Dining table / floor slot (not SQL "Table").
+model RestaurantTable {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  label     String
+  capacity  Int      @default(4)
+  status    String   @default("empty") // empty | occupied | bill_pending
+  createdAt DateTime @default(now())
+  orders    Order[]
+
+  @@unique([tenantId, label])
+  @@index([tenantId])
+  @@map("restaurant_tables")
+}
+
+/// One menu row per tenant; version bumps when items change.
+model Menu {
+  id        String     @id @default(uuid())
+  tenantId  String     @unique
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  version   Int        @default(1)
+  updatedAt DateTime   @updatedAt
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id           String      @id @default(uuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menuId       String
+  menu         Menu        @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  category     String
+  name         String
+  description  String?
+  price        Decimal     @db.Decimal(10, 2)
+  sortOrder    Int         @default(0)
+  isAvailable  Boolean     @default(true)
+  orderLineItems OrderItem[]
+
+  @@index([tenantId])
+  @@index([menuId])
+}
+
+model Order {
+  id          String          @id @default(uuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tableId     String
+  table       RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  placedById  String?
+  placedBy    User?           @relation("PlacedOrders", fields: [placedById], references: [id])
+  menuVersion Int
+  status      String          @default("pending") // pending | preparing | ready | served
+  source      String          @default("waiter") // waiter | qr
+  notes       String?
+  createdAt   DateTime        @default(now())
+  items       OrderItem[]
+
+  @@index([tenantId])
+  @@index([tableId, status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  itemName   String
+  note       String?
+
+  @@index([orderId])
 }
