@@ -1,0 +1,13 @@
+# Railway — set service "Root Directory" to `backend` if the Git repo root is the DineOps app folder.
+# Docs: https://docs.railway.app/deploy/config-as-code
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run build"
+
+[deploy]
+# Sync schema to Postgres (project uses db push; switch to migrate deploy when you add migrations).
+preDeployCommand = ["npx prisma db push --skip-generate"]
+startCommand = "npm start"
+healthcheckPath = "/health"
+healthcheckTimeout = 100

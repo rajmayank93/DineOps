@@ -19,10 +19,18 @@ if (fs.existsSync(envPathLocal)) {
 // We import authRoutes after loading environment variables so Prisma sees DATABASE_URL.
 const server = Fastify({ logger: true })
 
+const corsOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
+
 server.register(cors, {
-  origin: [process.env.FRONTEND_ORIGIN || "http://localhost:5173"],
+  origin: corsOrigins,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 })
+
+/** For load balancers (e.g. Railway health checks). */
+server.get("/health", async () => ({ ok: true }))
 
 const start = async () => {
   const [

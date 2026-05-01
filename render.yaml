@@ -1,0 +1,33 @@
+# Render Blueprint — DineOps API + Postgres
+# https://render.com/docs/blueprint-spec
+#
+# After first deploy: set FRONTEND_ORIGIN in the web service (your SPA URL, or comma-separated list).
+# Point frontend VITE_API_URL at https://<service-name>.onrender.com/api
+
+databases:
+  - name: dineops-db
+    plan: free
+
+services:
+  - type: web
+    name: dineops-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    branch: main
+    buildCommand: npm install && npm run build
+    preDeployCommand: npx prisma db push --skip-generate
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dineops-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        sync: false
