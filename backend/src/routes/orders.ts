@@ -24,6 +24,7 @@ export async function orderRoutes(server: FastifyInstance) {
       include: {
         table: { select: { id: true, label: true } },
         items: true,
+        bill: true,
         placedBy: { select: { id: true, email: true, role: true } },
       },
       take: 100,
@@ -48,6 +49,16 @@ export async function orderRoutes(server: FastifyInstance) {
           itemName: i.itemName,
           note: i.note,
         })),
+        bill: o.bill
+          ? {
+              id: o.bill.id,
+              subtotal: toMoney(o.bill.subtotal),
+              taxRate: toMoney(o.bill.taxRate),
+              taxAmount: toMoney(o.bill.taxAmount),
+              total: toMoney(o.bill.total),
+              paidAt: o.bill.paidAt?.toISOString() ?? null,
+            }
+          : null,
       })),
     }
   })
@@ -113,7 +124,12 @@ export async function orderRoutes(server: FastifyInstance) {
               }),
             },
           },
-          include: { items: true, table: true, placedBy: { select: { id: true, email: true, role: true } } },
+          include: {
+            items: true,
+            table: true,
+            bill: true,
+            placedBy: { select: { id: true, email: true, role: true } },
+          },
         })
 
         await tx.restaurantTable.update({
@@ -143,6 +159,16 @@ export async function orderRoutes(server: FastifyInstance) {
             itemName: i.itemName,
             note: i.note,
           })),
+          bill: order.bill
+            ? {
+                id: order.bill.id,
+                subtotal: toMoney(order.bill.subtotal),
+                taxRate: toMoney(order.bill.taxRate),
+                taxAmount: toMoney(order.bill.taxAmount),
+                total: toMoney(order.bill.total),
+                paidAt: order.bill.paidAt?.toISOString() ?? null,
+              }
+            : null,
         },
       }
     }
@@ -167,7 +193,12 @@ export async function orderRoutes(server: FastifyInstance) {
     const updated = await prisma.order.update({
       where: { id },
       data: { status: next },
-      include: { table: true, items: true, placedBy: { select: { id: true, email: true, role: true } } },
+      include: {
+        table: true,
+        items: true,
+        bill: true,
+        placedBy: { select: { id: true, email: true, role: true } },
+      },
     })
 
     if (next === "served") {
@@ -196,6 +227,16 @@ export async function orderRoutes(server: FastifyInstance) {
           itemName: i.itemName,
           note: i.note,
         })),
+        bill: updated.bill
+          ? {
+              id: updated.bill.id,
+              subtotal: toMoney(updated.bill.subtotal),
+              taxRate: toMoney(updated.bill.taxRate),
+              taxAmount: toMoney(updated.bill.taxAmount),
+              total: toMoney(updated.bill.total),
+              paidAt: updated.bill.paidAt?.toISOString() ?? null,
+            }
+          : null,
       },
     }
   })

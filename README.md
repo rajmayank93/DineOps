@@ -1,51 +1,32 @@
-# DineOps Authentication MVP
+# DineOps
 
-This repo includes a minimal full-stack login/signup implementation for a multi-tenant app.
+Multi-tenant restaurant operations: **auth**, **staff**, **tables**, **menu**, **orders** (kitchen flow), **billing** with printable receipts, and **analytics** (revenue from paid bills). Stack: **React (Vite)** · **Fastify** · **PostgreSQL** · **Prisma**.
 
-## Backend
+## Documentation
 
-1. Copy `.env.example` to `backend/.env`.
-2. Set `DATABASE_URL` for PostgreSQL and `JWT_SECRET`.
-3. Install backend dependencies:
-   ```bash
-   cd backend
-   npm install
-   ```
-4. Generate Prisma client:
-   ```bash
-   npx prisma generate
-   ```
-5. Run database migrations manually or use `npx prisma db push`.
-6. Start the backend:
-   ```bash
-   npm run dev
-   ```
+- **[DOCUMENTATION.md](./DOCUMENTATION.md)** — HLD/LLD, schema, RBAC matrix, API summary, domain rules (start here for technical depth).
+- **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** — Auth walkthrough plus billing pointers and file layout.
 
-The backend exposes:
-- `POST /api/auth/signup`
-- `POST /api/auth/login`
+## Quick start
 
-## Frontend
+### Backend
 
-1. Install frontend dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Start the frontend:
-   ```bash
-   npm run dev
-   ```
+1. Copy env: `cp backend/.env.example backend/.env` (or create `backend/.env`) with `DATABASE_URL`, `JWT_SECRET`, optional `PORT`, `FRONTEND_ORIGIN`.
+2. `cd backend && npm install` (runs **`prisma generate`** via `postinstall`).
+3. `npx prisma db push` (or migrate) to apply schema.
+4. `npm run dev` — API default **http://localhost:4000**.
 
-The frontend runs on `http://localhost:5173` and talks to the backend at `http://localhost:4000/api`.
+If you change **`schema.prisma`** without reinstalling, run **`npx prisma generate`** and restart the server.
 
-## What’s implemented
+### Frontend
 
-- Signup creates a restaurant tenant and an admin user
-- Login validates email/password and returns a JWT
-- Local storage keeps auth state on the client
-- Axios sends the JWT automatically on requests
+1. `cd frontend && npm install && npm run dev` — default **http://localhost:5173**.
+2. Set `VITE_API_URL` if the API is not at `http://localhost:4000/api`.
 
-## Notes
+## Implemented (high level)
 
-- This is a scaffold only. You can extend it with tenant middleware, RBAC, and protected routes next.
+- JWT auth, tenant isolation via `tenantId` from token, RBAC on routes.
+- Floor tables, versioned menu, orders (`pending` → `preparing` → `ready` → `served`).
+- Bills: create for **served** orders, **receiptText**, **mark paid** (table → `empty`).
+- Dashboard/reports: revenue and top items from **paid** bills; open orders include awaiting payment.
+- Mobile-friendly shell (drawer, safe areas).

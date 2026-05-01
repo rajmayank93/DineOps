@@ -115,7 +115,7 @@ function buildStats(summary: {
 }): StatConfig[] {
   const rev = Number(summary.revenueToday)
   let trend: 'up' | 'down' | 'neutral' = 'neutral'
-  let sub = 'vs yesterday (served orders, UTC day)'
+  let sub = 'vs yesterday (paid bills, UTC day)'
   if (summary.revenueTrendPct != null) {
     if (summary.revenueTrendPct > 0.5) {
       trend = 'up'
@@ -135,7 +135,7 @@ function buildStats(summary: {
 
   return [
     {
-      label: "Today's revenue (served)",
+      label: "Today's revenue (paid)",
       value: Number.isFinite(rev) ? formatInr(rev) : formatInr(0),
       sub,
       trend,
@@ -155,7 +155,7 @@ function buildStats(summary: {
     {
       label: 'Open orders',
       value: String(summary.openOrders),
-      sub: 'Pending, preparing, or ready',
+      sub: 'Kitchen queue + served, awaiting payment',
       trend: summary.openOrders > 3 ? 'down' : 'neutral',
       icon: ShoppingBag,
       iconBg: 'bg-amber-50',
@@ -219,7 +219,7 @@ export function Dashboard({ auth, onNavigate }: Props) {
         <p className="text-slate-500 text-sm mt-0.5">
           Live snapshot for{' '}
           <span className="font-medium text-slate-700">{auth.tenant.name}</span>
-          {' '}— revenue counts <span className="font-medium">served</span> orders (UTC calendar day).
+          {' '}— revenue is from <span className="font-medium">paid bills</span> (UTC calendar day).
         </p>
       </div>
 

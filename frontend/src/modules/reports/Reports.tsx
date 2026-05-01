@@ -42,7 +42,7 @@ export function Reports() {
           Reports
         </h1>
         <p className="text-slate-500 text-sm mt-1">
-          Last {rangeDays} days (UTC). Order volume is all orders; revenue is from <span className="font-medium">served</span> orders only.
+          Last {rangeDays} days (UTC). Order volume is all orders; revenue is from <span className="font-medium">paid bills</span> only.
         </p>
       </div>
 
@@ -65,7 +65,7 @@ export function Reports() {
                     <div
                       className="w-full max-w-[48px] rounded-t-md bg-indigo-500/90 shrink-0"
                       style={{ height: barH }}
-                      title={`${d.orderCount} orders, ${formatInr(d.servedRevenue)} served revenue`}
+                      title={`${d.orderCount} orders, ${formatInr(d.servedRevenue)} paid revenue`}
                     />
                     <span className="text-[10px] text-slate-400 mt-2 truncate w-full text-center" title={d.date}>
                       {d.date.slice(5)}
@@ -76,18 +76,18 @@ export function Reports() {
             </div>
             </div>
             <p className="text-xs text-slate-400 mt-4">
-              Served revenue by day (same window):{' '}
+              Paid revenue by day (same window):{' '}
               {byDay.map((d) => `${d.date}: ${formatInr(d.servedRevenue)}`).join(' · ') || '—'}
             </p>
           </div>
 
           <div className="bg-white rounded-lg shadow-card overflow-hidden">
             <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-900 text-[15px]">Top items (served)</h2>
+              <h2 className="font-semibold text-slate-900 text-[15px]">Top items (paid orders)</h2>
               <p className="text-xs text-slate-400 mt-0.5">By quantity sold in the last {rangeDays} days</p>
             </div>
             {topItems.length === 0 ? (
-              <p className="p-8 text-sm text-slate-400 text-center">No served orders in this period.</p>
+              <p className="p-8 text-sm text-slate-400 text-center">No paid orders in this period.</p>
             ) : (
               <div className="overflow-x-auto touch-pan-x">
               <table className="w-full text-sm min-w-[400px]">

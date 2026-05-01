@@ -32,6 +32,7 @@ const start = async () => {
     { tableRoutes },
     { menuRoutes },
     { orderRoutes },
+    { billRoutes },
     { analyticsRoutes },
   ] = await Promise.all([
     import("./routes/auth"),
@@ -40,6 +41,7 @@ const start = async () => {
     import("./routes/tables"),
     import("./routes/menu"),
     import("./routes/orders"),
+    import("./routes/bills"),
     import("./routes/analytics"),
   ])
 
@@ -49,6 +51,7 @@ const start = async () => {
   server.register(tableRoutes, { prefix: "/api" })
   server.register(menuRoutes, { prefix: "/api" })
   server.register(orderRoutes, { prefix: "/api" })
+  server.register(billRoutes, { prefix: "/api" })
   server.register(analyticsRoutes, { prefix: "/api" })
 
   try {
