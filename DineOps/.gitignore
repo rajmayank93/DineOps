@@ -2,5 +2,9 @@ node_modules
 **/node_modules
 dist
 **/dist
+# Secrets — do not commit (use .env.example for templates)
 .env
 **/.env
+.env.local
+**/.env.local
+.env.*.local
