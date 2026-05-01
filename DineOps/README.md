@@ -36,7 +36,7 @@ Free-tier limits and sleep/wake behavior are up to Railway’s current policy—
 ### Deploy backend (Render)
 
 1. In the [Render Dashboard](https://dashboard.render.com), use **Blueprint** → connect this repo → Render reads **`render.yaml`** at the repo root.
-2. Or create a **Web Service** manually: **Root Directory** = **`backend`**, **Build** = `npm install && npm run build`, **Pre-deploy** = `npx prisma db push --skip-generate`, **Start** = `npm start`.
+2. Or create a **Web Service** manually: **Root Directory** = **`backend`**, **Build** = `npm install && npm run build`, **Start** = `npm run render-start` (runs `prisma db push` then the server; free tier has **no** pre-deploy step).
 3. Add **PostgreSQL** (free) and set **`DATABASE_URL`** to the DB **Internal** or **External** URL Render provides (blueprint wires this via `fromDatabase`).
 4. Set **`FRONTEND_ORIGIN`** to your real frontend origin(s); **`JWT_SECRET`** should be a long secret (the sample blueprint uses **`generateValue`** for JWT on first deploy—in the dashboard you may replace it).
 5. **Health check path:** `/health`. Bind uses **`PORT`** (set by Render automatically).
