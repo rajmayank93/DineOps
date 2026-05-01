@@ -438,9 +438,18 @@ CORS: configured for frontend origin; methods include GET, POST, PUT, PATCH, DEL
 - `DATABASE_URL` — PostgreSQL connection string  
 - `JWT_SECRET` — signing secret  
 - `PORT` — default 4000  
-- `FRONTEND_ORIGIN` — CORS origin (default `http://localhost:5173`)
+- `FRONTEND_ORIGIN` — CORS allowed origin(s); comma-separated list supported (default single origin `http://localhost:5173`)
 
 After changing `schema.prisma`, run **`npx prisma generate`** (also runs on **`npm install`** via `postinstall` in `backend/package.json`) and restart the API.
+
+**Deploy — Render**
+
+- Repo root **`render.yaml`**: Blueprint for **free** Postgres + Node **web** service with **`rootDir: backend`**, **`preDeployCommand`**: `npx prisma db push --skip-generate`, **`healthCheckPath`**: `/health`. Create via Dashboard → Blueprint, or adjust commands manually to match.
+- Set **`FRONTEND_ORIGIN`** in the service to your frontend URL (required for browser CORS against production API).
+
+**Deploy — Railway**
+
+- **`backend/railway.toml`** documents build / release / start for the same backend.
 
 **Frontend**
 
