@@ -2,6 +2,7 @@ import {
   LayoutDashboard, ShoppingBag, LayoutGrid, UtensilsCrossed,
   Users, BarChart3, Settings, ChefHat,
 } from 'lucide-react'
+import { NAV_IDS_BY_ROLE } from '../../constants/navByRole'
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', id: 'dashboard' },
@@ -11,13 +12,6 @@ const NAV_ITEMS = [
   { icon: Users,           label: 'Staff',     id: 'staff'     },
   { icon: BarChart3,       label: 'Reports',   id: 'reports'   },
 ] as const
-
-/** Which sidebar sections each role may open (matches product RBAC; server still enforces). */
-const NAV_IDS_BY_ROLE: Record<string, readonly string[]> = {
-  admin:   ['dashboard', 'orders', 'tables', 'menu', 'staff', 'reports', 'settings'],
-  waiter:  ['dashboard', 'orders', 'tables', 'menu'],
-  kitchen: ['dashboard', 'orders'],
-}
 
 type SidebarProps = {
   role: string

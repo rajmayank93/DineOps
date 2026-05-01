@@ -21,17 +21,35 @@ const server = Fastify({ logger: true })
 
 server.register(cors, {
   origin: [process.env.FRONTEND_ORIGIN || "http://localhost:5173"],
-  methods: ["GET", "POST", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 })
 
 const start = async () => {
-  const [{ authRoutes }, { meRoutes }] = await Promise.all([
+  const [
+    { authRoutes },
+    { meRoutes },
+    { staffRoutes },
+    { tableRoutes },
+    { menuRoutes },
+    { orderRoutes },
+    { analyticsRoutes },
+  ] = await Promise.all([
     import("./routes/auth"),
     import("./routes/me"),
+    import("./routes/staff"),
+    import("./routes/tables"),
+    import("./routes/menu"),
+    import("./routes/orders"),
+    import("./routes/analytics"),
   ])
 
   server.register(authRoutes, { prefix: "/api/auth" })
   server.register(meRoutes, { prefix: "/api" })
+  server.register(staffRoutes, { prefix: "/api" })
+  server.register(tableRoutes, { prefix: "/api" })
+  server.register(menuRoutes, { prefix: "/api" })
+  server.register(orderRoutes, { prefix: "/api" })
+  server.register(analyticsRoutes, { prefix: "/api" })
 
   try {
     await server.listen({ port: Number(process.env.PORT) || 4000, host: "0.0.0.0" })
