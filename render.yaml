@@ -1,6 +1,9 @@
 # Render Blueprint — DineOps API + Postgres
 # https://render.com/docs/blueprint-spec
 #
+# Free-tier web services do not support preDeployCommand. Schema sync runs at
+# container start via npm run render-start (prisma db push then node).
+#
 # After first deploy: set FRONTEND_ORIGIN in the web service (your SPA URL, or comma-separated list).
 # Point frontend VITE_API_URL at https://<service-name>.onrender.com/api
 
@@ -17,8 +20,7 @@ services:
     rootDir: backend
     branch: main
     buildCommand: npm install && npm run build
-    preDeployCommand: npx prisma db push --skip-generate
-    startCommand: npm start
+    startCommand: npm run render-start
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION

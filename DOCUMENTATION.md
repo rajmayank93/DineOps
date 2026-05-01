@@ -444,7 +444,7 @@ After changing `schema.prisma`, run **`npx prisma generate`** (also runs on **`n
 
 **Deploy — Render**
 
-- Repo root **`render.yaml`**: Blueprint for **free** Postgres + Node **web** service with **`rootDir: backend`**, **`preDeployCommand`**: `npx prisma db push --skip-generate`, **`healthCheckPath`**: `/health`. Create via Dashboard → Blueprint, or adjust commands manually to match.
+- Repo root **`render.yaml`**: Blueprint for **free** Postgres + Node **web** service with **`rootDir: backend`**, **`startCommand`**: `npm run render-start` ( **`prisma db push`** then **`node`** — free tier has **no** pre-deploy; sync runs on each start), **`healthCheckPath`**: `/health`. Create via Dashboard → Blueprint, or adjust commands manually to match.
 - Set **`FRONTEND_ORIGIN`** in the service to your frontend URL (required for browser CORS against production API).
 
 **Deploy — Railway**
