@@ -37,10 +37,11 @@ export async function analyticsRoutes(server: FastifyInstance) {
     const [
       tablesTotal,
       tablesActive,
-      openOrders,
+      kitchenOpen,
+      awaitingPayment,
       staffActive,
-      servedToday,
-      servedYesterday,
+      paidBillsToday,
+      paidBillsYesterday,
       recentOrders,
     ] = await Promise.all([
       prisma.restaurantTable.count({ where: { tenantId } }),
@@ -50,33 +51,38 @@ export async function analyticsRoutes(server: FastifyInstance) {
       prisma.order.count({
         where: { tenantId, status: { in: ["pending", "preparing", "ready"] } },
       }),
-      prisma.user.count({ where: { tenantId, isActive: true } }),
-      prisma.order.findMany({
+      prisma.order.count({
         where: {
           tenantId,
           status: "served",
-          createdAt: { gte: todayStart, lt: todayEnd },
+          OR: [{ bill: { is: null } }, { bill: { is: { paidAt: null } } }],
         },
-        include: { items: true, table: { select: { label: true } } },
       }),
-      prisma.order.findMany({
+      prisma.user.count({ where: { tenantId, isActive: true } }),
+      prisma.bill.findMany({
         where: {
           tenantId,
-          status: "served",
-          createdAt: { gte: yStart, lt: yEnd },
+          paidAt: { gte: todayStart, lt: todayEnd },
         },
-        include: { items: true },
+      }),
+      prisma.bill.findMany({
+        where: {
+          tenantId,
+          paidAt: { gte: yStart, lt: yEnd },
+        },
       }),
       prisma.order.findMany({
         where: { tenantId },
         orderBy: { createdAt: "desc" },
         take: 5,
-        include: { items: true, table: { select: { label: true } } },
+        include: { items: true, table: { select: { label: true } }, bill: true },
       }),
     ])
 
-    const revenueToday = servedToday.reduce((sum, o) => sum + sumOrderLines(o.items), 0)
-    const revenueYesterday = servedYesterday.reduce((sum, o) => sum + sumOrderLines(o.items), 0)
+    const openOrders = kitchenOpen + awaitingPayment
+
+    const revenueToday = paidBillsToday.reduce((sum, b) => sum + Number(String(b.total)), 0)
+    const revenueYesterday = paidBillsYesterday.reduce((sum, b) => sum + Number(String(b.total)), 0)
     let revenueTrendPct: number | null = null
     if (revenueYesterday > 0) {
       revenueTrendPct = ((revenueToday - revenueYesterday) / revenueYesterday) * 100
@@ -84,15 +90,21 @@ export async function analyticsRoutes(server: FastifyInstance) {
       revenueTrendPct = 100
     }
 
-    const recent = recentOrders.map((o) => ({
-      id: o.id,
-      shortId: o.id.slice(0, 8),
-      tableLabel: o.table.label,
-      status: o.status,
-      itemsSummary: o.items.map((i) => `${i.quantity}× ${i.itemName}`).join(", ") || "—",
-      total: sumOrderLines(o.items).toFixed(2),
-      createdAt: o.createdAt.toISOString(),
-    }))
+    const recent = recentOrders.map((o) => {
+      const billPaid = o.bill?.paidAt
+        ? Number(String(o.bill.total))
+        : null
+      const total = billPaid !== null ? billPaid : sumOrderLines(o.items)
+      return {
+        id: o.id,
+        shortId: o.id.slice(0, 8),
+        tableLabel: o.table.label,
+        status: o.status,
+        itemsSummary: o.items.map((i) => `${i.quantity}× ${i.itemName}`).join(", ") || "—",
+        total: total.toFixed(2),
+        createdAt: o.createdAt.toISOString(),
+      }
+    })
 
     return {
       summary: {
@@ -114,13 +126,11 @@ export async function analyticsRoutes(server: FastifyInstance) {
     const weekStart = utcDayBounds(addDaysUtc(now, -6)).start
     const weekEnd = utcDayBounds(now).end
 
-    const servedInWeek = await prisma.order.findMany({
+    const paidBillsWeek = await prisma.bill.findMany({
       where: {
         tenantId,
-        status: "served",
-        createdAt: { gte: weekStart, lt: weekEnd },
+        paidAt: { gte: weekStart, lt: weekEnd },
       },
-      include: { items: true },
     })
 
     const dayKeys: string[] = []
@@ -128,17 +138,18 @@ export async function analyticsRoutes(server: FastifyInstance) {
       dayKeys.push(addDaysUtc(weekStart, i).toISOString().slice(0, 10))
     }
 
-    const servedRevenueByDay = new Map<string, number>()
+    const paidRevenueByDay = new Map<string, number>()
     const orderCountByDay = new Map<string, number>()
     for (const k of dayKeys) {
-      servedRevenueByDay.set(k, 0)
+      paidRevenueByDay.set(k, 0)
       orderCountByDay.set(k, 0)
     }
 
-    for (const o of servedInWeek) {
-      const key = o.createdAt.toISOString().slice(0, 10)
-      if (servedRevenueByDay.has(key)) {
-        servedRevenueByDay.set(key, (servedRevenueByDay.get(key) ?? 0) + sumOrderLines(o.items))
+    for (const b of paidBillsWeek) {
+      if (!b.paidAt) continue
+      const key = b.paidAt.toISOString().slice(0, 10)
+      if (paidRevenueByDay.has(key)) {
+        paidRevenueByDay.set(key, (paidRevenueByDay.get(key) ?? 0) + Number(String(b.total)))
       }
     }
 
@@ -157,8 +168,7 @@ export async function analyticsRoutes(server: FastifyInstance) {
       where: {
         order: {
           tenantId,
-          status: "served",
-          createdAt: { gte: weekStart, lt: weekEnd },
+          bill: { is: { paidAt: { gte: weekStart, lt: weekEnd } } },
         },
       },
       select: { itemName: true, quantity: true, unitPrice: true },
@@ -184,7 +194,7 @@ export async function analyticsRoutes(server: FastifyInstance) {
     const ordersByDay = dayKeys.map((date) => ({
       date,
       orderCount: orderCountByDay.get(date) ?? 0,
-      servedRevenue: (servedRevenueByDay.get(date) ?? 0).toFixed(2),
+      servedRevenue: (paidRevenueByDay.get(date) ?? 0).toFixed(2),
     }))
 
     return { topItems, ordersByDay, rangeDays: 7 }

@@ -19,6 +19,7 @@ model Tenant {
   menu             Menu?
   menuItems        MenuItem[]
   orders           Order[]
+  bills            Bill[]
 }
 
 model User {
@@ -94,6 +95,7 @@ model Order {
   notes       String?
   createdAt   DateTime        @default(now())
   items       OrderItem[]
+  bill        Bill?
 
   @@index([tenantId])
   @@index([tableId, status])
@@ -112,4 +114,22 @@ model OrderItem {
   note       String?
 
   @@index([orderId])
+}
+
+model Bill {
+  id        String    @id @default(uuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderId   String    @unique
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  subtotal  Decimal   @db.Decimal(10, 2)
+  taxRate   Decimal   @db.Decimal(5, 2)
+  taxAmount Decimal   @db.Decimal(10, 2)
+  total     Decimal   @db.Decimal(10, 2)
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, paidAt])
+  @@map("bills")
 }

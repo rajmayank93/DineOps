@@ -287,6 +287,36 @@ This ensures:
 
 ---
 
+## Billing and receipts (domain)
+
+### Overview
+
+After an order reaches **`served`**, **admin** and **waiter** roles can create a **Bill** (one per order), view a **plaintext receipt** (`receiptText`), print from the browser, and **mark paid** (sets `paidAt` and frees the table). **Kitchen** cannot access billing APIs.
+
+### Backend
+
+| Piece | Location |
+|------|----------|
+| Schema | [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) — `Bill` model, `Order.bill` |
+| Receipt string | [`backend/src/lib/receiptText.ts`](../backend/src/lib/receiptText.ts) — `buildReceiptText` |
+| HTTP routes | [`backend/src/routes/bills.ts`](../backend/src/routes/bills.ts) — `POST /api/bills`, `GET /api/bills/:id`, `PATCH /api/bills/:id/pay` |
+| Order payloads | [`backend/src/routes/orders.ts`](../backend/src/routes/orders.ts) — optional `bill` on list/create/patch |
+| Analytics | [`backend/src/routes/analytics.ts`](../backend/src/routes/analytics.ts) — revenue from **paid** bills |
+
+### Frontend
+
+- **[`frontend/src/services/api.ts`](../frontend/src/services/api.ts)** — `createBill`, `fetchBill`, `payBill`; `OrderDto.bill`
+- **[`frontend/src/modules/orders/Orders.tsx`](../frontend/src/modules/orders/Orders.tsx)** — billing modal, print, mark paid
+- **[`frontend/src/utils/printPlainText.ts`](../frontend/src/utils/printPlainText.ts)** — `window.print()` via hidden iframe
+
+### Operational note
+
+After pulling schema changes, run **`npx prisma generate`** in `backend/` (or **`npm install`**, which runs **`postinstall`**) and restart the API so `include: { bill: true }` matches the generated client.
+
+**Full API and schema detail:** [`DOCUMENTATION.md`](../DOCUMENTATION.md).
+
+---
+
 ## Database Schema
 
 ### Tenant Model
@@ -417,8 +447,8 @@ curl -X GET http://localhost:4000/api/admin/tenant \
 ## Next Steps
 
 1. **Prisma tenant extension** — Auto-inject `tenantId` into all queries and creates (see Multi-Tenancy section)
-2. **Tables / menu / orders APIs** — Use `authenticate` + `requireRoles` per route; always scope by `request.auth.tenantId`
-3. **Staff management** — Admin-only CRUD for `User` rows (e.g. create waiter accounts) instead of manual SQL
+2. **Payment integrations** — UPI/card capture while keeping `Bill` as the source of truth
+3. **QR / public ordering** — `source: qr` flows and unauthenticated or token-lite APIs
 4. **Session hardening** — Refresh tokens, optional server-side blocklist for logout
 5. **Email verification** — Confirm email on signup
 6. **Password reset** — Allow users to reset forgotten passwords
@@ -432,46 +462,37 @@ backend/
 ├── src/
 │   ├── routes/
 │   │   ├── auth.ts             ← Signup & login
-│   │   └── me.ts               ← GET /me, GET /admin/tenant (protected)
-│   ├── middleware/
-│   │   └── auth.ts             ← authenticate, requireRoles
-│   ├── types/
-│   │   └── fastify.d.ts        ← request.auth typing
+│   │   ├── me.ts               ← GET /me, GET /admin/tenant (protected)
+│   │   ├── staff.ts            ← Staff CRUD (admin)
+│   │   ├── tables.ts, menu.ts, orders.ts, bills.ts, analytics.ts
+│   │   └── ...
 │   ├── lib/
-│   │   ├── jwt.ts              ← JWT signing/verification
-│   │   ├── hash.ts             ← Password hashing
-│   │   └── prisma.ts           ← Database client
-│   └── server.ts               ← Fastify app setup
+│   │   ├── receiptText.ts      ← Plain-text receipt builder
+│   │   └── ...
+│   └── server.ts
 ├── prisma/
-│   └── schema.prisma           ← Database schema
-└── .env                        ← Database & JWT secrets
+│   └── schema.prisma           ← Includes Bill, Order.bill
+└── package.json                ← postinstall: prisma generate
 
 frontend/
 ├── src/
 │   ├── modules/
 │   │   ├── auth/
-│   │   │   ├── Login.tsx
-│   │   │   └── SignUp.tsx
-│   │   └── dashboard/
-│   │       └── Dashboard.tsx
-│   ├── components/
-│   │   └── layout/
-│   │       ├── Sidebar.tsx     ← Role-based nav
-│   │       └── Header.tsx
-│   ├── constants/
-│   │   └── navByRole.ts        ← Role → allowed sidebar ids
-│   ├── services/
-│   │   └── api.ts              ← Axios + signup, login, getMe
-│   ├── store/
-│   │   └── authStore.ts
-│   └── App.tsx                 ← Auth, session refresh, section guard
-└── .env
+│   │   ├── dashboard/
+│   │   ├── orders/             ← Billing UI
+│   │   └── ...
+│   ├── utils/
+│   │   ├── money.ts
+│   │   └── printPlainText.ts
+│   └── services/
+│       └── api.ts              ← Bills endpoints
+└── ...
 ```
 
 
 ---
 
 **Last Updated:** May 1, 2026  
-**Status:** Auth + protected APIs + RBAC pattern + role-aware UI — ready for domain APIs (tables, menu, orders)
+**Status:** Auth + RBAC + tables, menu, orders, **billing/receipts**, analytics (paid-bill revenue). See **`DOCUMENTATION.md`** for the full system spec.
 
 

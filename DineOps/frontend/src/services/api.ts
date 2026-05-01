@@ -158,6 +158,15 @@ export type OrderLineDto = {
   note: string | null
 }
 
+export type BillSummaryDto = {
+  id: string
+  subtotal: string
+  taxRate: string
+  taxAmount: string
+  total: string
+  paidAt: string | null
+}
+
 export type OrderDto = {
   id: string
   tableId: string
@@ -169,6 +178,13 @@ export type OrderDto = {
   createdAt: string
   placedBy: { id: string; email: string; role: string } | null
   items: OrderLineDto[]
+  bill: BillSummaryDto | null
+}
+
+export type BillWithReceiptDto = BillSummaryDto & {
+  orderId: string
+  createdAt: string
+  receiptText: string
 }
 
 export async function listOrders(params?: { tableId?: string; status?: string }) {
@@ -188,6 +204,21 @@ export async function createOrder(payload: {
 export async function advanceOrderStatus(orderId: string) {
   const response = await api.patch<{ order: OrderDto }>(`/orders/${orderId}/status`, {})
   return response.data.order
+}
+
+export async function createBill(payload: { orderId: string; taxRate?: number }) {
+  const response = await api.post<{ bill: BillWithReceiptDto }>('/bills', payload)
+  return response.data.bill
+}
+
+export async function fetchBill(billId: string) {
+  const response = await api.get<{ bill: BillWithReceiptDto }>(`/bills/${billId}`)
+  return response.data.bill
+}
+
+export async function payBill(billId: string) {
+  const response = await api.patch<{ bill: BillWithReceiptDto }>(`/bills/${billId}/pay`, {})
+  return response.data.bill
 }
 
 // ─── Analytics & admin tenant ─────────────────────────────────────────────────

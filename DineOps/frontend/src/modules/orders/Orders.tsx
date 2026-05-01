@@ -3,15 +3,19 @@ import axios from 'axios'
 import { ShoppingBag, Plus } from 'lucide-react'
 import {
   advanceOrderStatus,
+  createBill,
   createOrder,
+  fetchBill,
   fetchMenu,
   listOrders,
   listTables,
+  payBill,
   type MenuItemDto,
   type OrderDto,
   type FloorTable,
 } from '../../services/api'
 import { formatInr } from '../../utils/money'
+import { printPlainText } from '../../utils/printPlainText'
 
 type Props = { role: string }
 
@@ -30,6 +34,11 @@ const advanceLabel = (status: string) => {
   return 'Advance'
 }
 
+type BillingModal =
+  | { status: 'loading' }
+  | { status: 'new'; orderId: string; tableLabel: string; taxRate: string }
+  | { status: 'receipt'; billId: string; tableLabel: string; text: string; canPay: boolean }
+
 export function Orders({ role }: Props) {
   const [orders, setOrders]       = useState<OrderDto[]>([])
   const [tables, setTables]       = useState<FloorTable[]>([])
@@ -43,7 +52,10 @@ export function Orders({ role }: Props) {
   const [notes, setNotes]        = useState('')
   const [lines, setLines]        = useState<{ menuItemId: string; quantity: number }[]>([])
 
+  const [billing, setBilling] = useState<BillingModal | null>(null)
+
   const canCreate = role === 'admin' || role === 'waiter'
+  const canManageBilling = canCreate
 
   const load = useCallback(async () => {
     setError('')
@@ -122,6 +134,77 @@ export function Orders({ role }: Props) {
     }
   }
 
+  async function openBilling(order: OrderDto) {
+    if (!canManageBilling || order.status !== 'served') return
+    setError('')
+    if (!order.bill) {
+      setBilling({ status: 'new', orderId: order.id, tableLabel: order.tableLabel, taxRate: '5' })
+      return
+    }
+    setBilling({ status: 'loading' })
+    try {
+      const b = await fetchBill(order.bill.id)
+      setBilling({
+        status: 'receipt',
+        billId: b.id,
+        tableLabel: order.tableLabel,
+        text: b.receiptText,
+        canPay: !b.paidAt,
+      })
+    } catch (err) {
+      setBilling(null)
+      if (axios.isAxiosError(err)) {
+        setError((err.response?.data as { message?: string })?.message ?? 'Could not load bill.')
+      }
+    }
+  }
+
+  async function submitCreateBill(e: FormEvent) {
+    e.preventDefault()
+    if (billing?.status !== 'new') return
+    const tax = Number(billing.taxRate)
+    if (Number.isNaN(tax) || tax < 0 || tax > 100) {
+      setError('Tax rate must be between 0 and 100.')
+      return
+    }
+    setError('')
+    try {
+      const b = await createBill({ orderId: billing.orderId, taxRate: tax })
+      setBilling({
+        status: 'receipt',
+        billId: b.id,
+        tableLabel: billing.tableLabel,
+        text: b.receiptText,
+        canPay: !b.paidAt,
+      })
+      await load()
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError((err.response?.data as { message?: string })?.message ?? 'Could not create bill.')
+      }
+    }
+  }
+
+  async function markPaid() {
+    if (billing?.status !== 'receipt' || !billing.canPay) return
+    setError('')
+    try {
+      const b = await payBill(billing.billId)
+      setBilling({
+        status: 'receipt',
+        billId: b.id,
+        tableLabel: billing.tableLabel,
+        text: b.receiptText,
+        canPay: !b.paidAt,
+      })
+      await load()
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError((err.response?.data as { message?: string })?.message ?? 'Could not record payment.')
+      }
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl space-y-6 mx-auto w-full">
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4">
@@ -179,16 +262,37 @@ export function Orders({ role }: Props) {
                   <span className="inline-block mt-2 text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                     {o.status}
                   </span>
+                  {o.bill ? (
+                    <p className="text-xs text-slate-600 mt-2">
+                      Bill {formatInr(o.bill.total)}
+                      {o.bill.paidAt ? (
+                        <span className="ml-2 text-emerald-700 font-semibold">Paid</span>
+                      ) : (
+                        <span className="ml-2 text-amber-700 font-semibold">Unpaid</span>
+                      )}
+                    </p>
+                  ) : null}
                 </div>
+                <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
                 {canAdvance(role, o.status) && (
                   <button
                     type="button"
                     onClick={() => advance(o.id)}
-                    className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 py-2 px-1 -mr-1 rounded-lg active:bg-indigo-50 touch-manipulation shrink-0 text-left sm:text-right"
+                    className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 py-2 px-1 -mr-1 rounded-lg active:bg-indigo-50 touch-manipulation text-left sm:text-right"
                   >
                     {advanceLabel(o.status)}
                   </button>
                 )}
+                {canManageBilling && o.status === 'served' && (
+                  <button
+                    type="button"
+                    onClick={() => void openBilling(o)}
+                    className="text-sm font-semibold text-slate-800 hover:text-slate-950 py-2 px-1 -mr-1 rounded-lg active:bg-slate-100 touch-manipulation text-left sm:text-right border border-slate-200 sm:border-0"
+                  >
+                    {o.bill ? (o.bill.paidAt ? 'View receipt' : 'Receipt / pay') : 'Create bill'}
+                  </button>
+                )}
+                </div>
               </div>
               <ul className="mt-3 border-t border-slate-100 pt-3 space-y-1">
                 {o.items.map((li) => (
@@ -275,6 +379,91 @@ export function Orders({ role }: Props) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {billing && (
+        <div className="fixed inset-0 z-50 flex flex-col sm:items-center sm:justify-center sm:p-4 bg-black/40">
+          <div className="bg-white flex flex-col flex-1 sm:flex-none sm:w-full sm:max-w-md sm:max-h-[90vh] sm:rounded-xl shadow-xl w-full max-h-[100dvh] overflow-y-auto overscroll-contain p-4 sm:p-6 pb-safe sm:pb-6">
+            <h2 className="text-lg font-bold text-slate-900 shrink-0">
+              {billing.status === 'new' ? 'New bill' : 'Receipt'}
+            </h2>
+            {billing.status === 'loading' && (
+              <p className="text-sm text-slate-500 mt-4">Loading bill…</p>
+            )}
+            {billing.status === 'new' && (
+              <form onSubmit={submitCreateBill} className="mt-4 space-y-4">
+                <p className="text-sm text-slate-600">
+                  Table <span className="font-semibold text-slate-900">{billing.tableLabel}</span> — set tax % for this
+                  bill.
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Tax rate (%)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.01}
+                    value={billing.taxRate}
+                    onChange={(e) =>
+                      setBilling({ ...billing, taxRate: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm min-h-11"
+                  />
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBilling(null)}
+                    className="px-4 py-3 sm:py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg min-h-11 sm:min-h-0"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-3 sm:py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 min-h-11 sm:min-h-0"
+                  >
+                    Generate receipt
+                  </button>
+                </div>
+              </form>
+            )}
+            {billing.status === 'receipt' && (
+              <div className="mt-4 space-y-4">
+                <p className="text-sm text-slate-600">
+                  Table <span className="font-semibold text-slate-900">{billing.tableLabel}</span>
+                </p>
+                <pre className="text-xs sm:text-sm leading-snug bg-slate-50 border border-slate-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap font-mono text-slate-800">
+                  {billing.text}
+                </pre>
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printPlainText(billing.text)}
+                    className="px-4 py-3 sm:py-2 text-sm font-semibold border border-slate-300 rounded-lg hover:bg-slate-50 min-h-11 sm:min-h-0 touch-manipulation"
+                  >
+                    Print
+                  </button>
+                  {billing.canPay && (
+                    <button
+                      type="button"
+                      onClick={() => void markPaid()}
+                      className="px-4 py-3 sm:py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 min-h-11 sm:min-h-0 touch-manipulation"
+                    >
+                      Mark paid
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setBilling(null)}
+                    className="px-4 py-3 sm:py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg min-h-11 sm:min-h-0 touch-manipulation sm:ml-auto"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
