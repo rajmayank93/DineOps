@@ -27,6 +27,12 @@ function App() {
   const [auth, setAuth]               = useState<AuthData | null>(getAuthData())
   const [page, setPage]               = useState<Page>('login')
   const [activeSection, setSection]   = useState(initialActiveSection)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  const navigateSection = (id: string) => {
+    setSection(id)
+    setMobileNavOpen(false)
+  }
 
   useEffect(() => {
     setAuth(getAuthData())
@@ -76,6 +82,26 @@ function App() {
     }
   }, [auth, activeSection])
 
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const close = () => {
+      if (mq.matches) setMobileNavOpen(false)
+    }
+    mq.addEventListener('change', close)
+    close()
+    return () => mq.removeEventListener('change', close)
+  }, [mobileNavOpen])
+
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mobileNavOpen])
+
   function handleLogout() {
     logout()
     setAuth(null)
@@ -93,15 +119,34 @@ function App() {
   // ── Authenticated: full dashboard layout ────────────────────
   if (auth) {
     return (
-      <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
-        <Sidebar role={auth.user.role} activeSection={activeSection} onNavigate={setSection} />
+      <div className="flex min-h-screen-dvh h-screen overflow-hidden bg-slate-50 font-sans">
+        {mobileNavOpen && (
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px] lg:hidden touch-manipulation"
+            aria-label="Close menu"
+            onClick={() => setMobileNavOpen(false)}
+          />
+        )}
 
-        <div className="flex-1 flex flex-col min-w-0">
-          <Header auth={auth} activeSection={activeSection} onLogout={handleLogout} />
+        <Sidebar
+          role={auth.user.role}
+          activeSection={activeSection}
+          onNavigate={navigateSection}
+          mobileOpen={mobileNavOpen}
+        />
 
-          <main className="flex-1 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          <Header
+            auth={auth}
+            activeSection={activeSection}
+            onLogout={handleLogout}
+            onMenuClick={() => setMobileNavOpen(true)}
+          />
+
+          <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pb-safe overscroll-y-contain">
             {activeSection === 'dashboard' && (
-              <Dashboard auth={auth} onNavigate={setSection} />
+              <Dashboard auth={auth} onNavigate={navigateSection} />
             )}
             {activeSection === 'staff' && <Staff />}
             {activeSection === 'tables' && <Tables role={auth.user.role} />}
@@ -117,7 +162,7 @@ function App() {
               activeSection !== 'orders' &&
               activeSection !== 'reports' &&
               activeSection !== 'settings' && (
-              <div className="p-6 max-w-7xl">
+              <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
                 <div className="bg-white rounded-lg shadow-card p-12 text-center">
                   <p className="text-slate-400 text-sm font-medium capitalize">
                     {activeSection} — coming soon

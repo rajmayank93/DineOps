@@ -123,20 +123,20 @@ export function Orders({ role }: Props) {
   }
 
   return (
-    <div className="p-6 max-w-4xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <ShoppingBag size={24} className="text-indigo-600" />
+    <div className="p-4 sm:p-6 max-w-4xl space-y-6 mx-auto w-full">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <ShoppingBag size={22} className="text-indigo-600 shrink-0 sm:w-6 sm:h-6" />
             Orders
           </h1>
           <p className="text-slate-500 text-sm mt-1">Kitchen flow: pending → preparing → ready → served.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col w-full sm:w-auto sm:flex-row items-stretch sm:items-center gap-2">
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="rounded-lg border border-slate-200 text-sm px-3 py-2 bg-white"
+            className="rounded-lg border border-slate-200 text-sm px-3 py-2.5 sm:py-2 bg-white w-full sm:w-auto min-h-11 sm:min-h-0"
           >
             <option value="">All statuses</option>
             <option value="pending">Pending</option>
@@ -149,7 +149,7 @@ export function Orders({ role }: Props) {
               type="button"
               onClick={openNewOrder}
               disabled={!tables.length || !menuItems.length}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold px-4 py-2 hover:bg-indigo-700 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold px-4 py-3 sm:py-2 hover:bg-indigo-700 disabled:opacity-40 w-full sm:w-auto min-h-11 sm:min-h-0 touch-manipulation"
             >
               <Plus size={16} />
               New order
@@ -167,7 +167,7 @@ export function Orders({ role }: Props) {
       ) : (
         <ul className="space-y-4">
           {orders.map((o) => (
-            <li key={o.id} className="bg-white rounded-lg shadow-card p-5">
+            <li key={o.id} className="bg-white rounded-lg shadow-card p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-slate-900">
@@ -184,7 +184,7 @@ export function Orders({ role }: Props) {
                   <button
                     type="button"
                     onClick={() => advance(o.id)}
-                    className="text-sm font-semibold text-indigo-600 hover:text-indigo-800"
+                    className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 py-2 px-1 -mr-1 rounded-lg active:bg-indigo-50 touch-manipulation shrink-0 text-left sm:text-right"
                   >
                     {advanceLabel(o.status)}
                   </button>
@@ -206,9 +206,9 @@ export function Orders({ role }: Props) {
       )}
 
       {modal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
-            <h2 className="text-lg font-bold text-slate-900">New order</h2>
+        <div className="fixed inset-0 z-50 flex flex-col sm:items-center sm:justify-center sm:p-4 bg-black/40">
+          <div className="bg-white flex flex-col flex-1 sm:flex-none sm:max-w-lg sm:max-h-[90vh] sm:rounded-xl shadow-xl w-full max-h-[100dvh] overflow-y-auto overscroll-contain p-4 sm:p-6 pb-safe sm:pb-6 pt-4 sm:pt-6">
+            <h2 className="text-lg font-bold text-slate-900 shrink-0">New order</h2>
             <form onSubmit={submitOrder} className="mt-4 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Table</label>
@@ -216,7 +216,7 @@ export function Orders({ role }: Props) {
                   required
                   value={tableId}
                   onChange={(e) => setTableId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm min-h-11"
                 >
                   {tables.map((t) => (
                     <option key={t.id} value={t.id}>{t.label}</option>
@@ -226,11 +226,11 @@ export function Orders({ role }: Props) {
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Items</label>
                 {lines.map((line, i) => (
-                  <div key={i} className="flex gap-2 mb-2">
+                  <div key={i} className="flex flex-col sm:flex-row gap-2 mb-3 sm:mb-2">
                     <select
                       value={line.menuItemId}
                       onChange={(e) => setLine(i, 'menuItemId', e.target.value)}
-                      className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                      className="flex-1 rounded-lg border border-slate-200 px-2 py-2.5 sm:py-1.5 text-sm min-h-11 sm:min-h-0 w-full"
                     >
                       {menuItems.map((m) => (
                         <option key={m.id} value={m.id}>
@@ -243,7 +243,7 @@ export function Orders({ role }: Props) {
                       min={1}
                       value={line.quantity}
                       onChange={(e) => setLine(i, 'quantity', e.target.value)}
-                      className="w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                      className="w-full sm:w-20 rounded-lg border border-slate-200 px-2 py-2.5 sm:py-1.5 text-sm min-h-11 sm:min-h-0"
                     />
                   </div>
                 ))}
@@ -256,20 +256,20 @@ export function Orders({ role }: Props) {
                 <input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm min-h-11"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 sm:pt-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setModal(false)}
-                  className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-3 sm:py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg touch-manipulation min-h-11 sm:min-h-0"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="px-4 py-3 sm:py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 touch-manipulation min-h-11 sm:min-h-0"
                 >
                   Create
                 </button>

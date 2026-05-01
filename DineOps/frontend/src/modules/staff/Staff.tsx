@@ -51,9 +51,9 @@ export function Staff() {
   }
 
   return (
-    <div className="p-6 max-w-4xl space-y-8">
+    <div className="p-4 sm:p-6 max-w-4xl space-y-6 mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Staff</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Staff</h1>
         <p className="text-slate-500 text-sm mt-1">
           Restaurant signup creates the <span className="font-medium text-slate-700">admin</span> owner only.
           Add waiter or kitchen accounts here; they can log in with the same login page using their email and

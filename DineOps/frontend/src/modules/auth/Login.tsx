@@ -38,7 +38,7 @@ export function LoginForm({ onSwitch, onLogin }: Props) {
   }
 
   return (
-    <div className="min-h-screen flex font-sans">
+    <div className="min-h-screen-dvh flex font-sans">
       {/* ── Brand panel ──────────────────────────────────────── */}
       <div className="hidden lg:flex lg:w-5/12 bg-[#0f172a] flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-700/20 rounded-full blur-3xl pointer-events-none" />
@@ -76,7 +76,7 @@ export function LoginForm({ onSwitch, onLogin }: Props) {
       </div>
 
       {/* ── Form panel ───────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-slate-50 py-8 sm:py-0 pb-safe">
         <div className="w-full max-w-md">
           <div className="flex items-center gap-2.5 mb-8 lg:hidden">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
