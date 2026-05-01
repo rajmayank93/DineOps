@@ -35,10 +35,10 @@ export function Reports() {
   const maxOrders = Math.max(1, ...byDay.map((d) => d.orderCount))
 
   return (
-    <div className="p-6 max-w-5xl space-y-8">
+    <div className="p-4 sm:p-6 max-w-5xl space-y-8 mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <BarChart3 size={26} className="text-indigo-600" />
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <BarChart3 size={24} className="text-indigo-600 shrink-0" />
           Reports
         </h1>
         <p className="text-slate-500 text-sm mt-1">
@@ -52,9 +52,10 @@ export function Reports() {
         <p className="text-sm text-slate-400">Loading…</p>
       ) : (
         <>
-          <div className="bg-white rounded-lg shadow-card p-6">
+          <div className="bg-white rounded-lg shadow-card p-4 sm:p-6 overflow-hidden">
             <h2 className="font-semibold text-slate-900 text-[15px] mb-4">Orders per day</h2>
-            <div className="flex items-end gap-2 h-44">
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 touch-pan-x pb-1">
+            <div className="flex items-end gap-2 h-44 min-w-[520px] sm:min-w-0">
               {byDay.map((d) => {
                 const pct = maxOrders > 0 ? d.orderCount / maxOrders : 0
                 const barH = Math.max(10, Math.round(pct * 128))
@@ -73,6 +74,7 @@ export function Reports() {
                 )
               })}
             </div>
+            </div>
             <p className="text-xs text-slate-400 mt-4">
               Served revenue by day (same window):{' '}
               {byDay.map((d) => `${d.date}: ${formatInr(d.servedRevenue)}`).join(' · ') || '—'}
@@ -80,14 +82,15 @@ export function Reports() {
           </div>
 
           <div className="bg-white rounded-lg shadow-card overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
               <h2 className="font-semibold text-slate-900 text-[15px]">Top items (served)</h2>
               <p className="text-xs text-slate-400 mt-0.5">By quantity sold in the last {rangeDays} days</p>
             </div>
             {topItems.length === 0 ? (
               <p className="p-8 text-sm text-slate-400 text-center">No served orders in this period.</p>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto touch-pan-x">
+              <table className="w-full text-sm min-w-[400px]">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50 text-left">
                     <th className="px-4 py-2.5 font-semibold text-slate-500">Item</th>
@@ -107,6 +110,7 @@ export function Reports() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </>

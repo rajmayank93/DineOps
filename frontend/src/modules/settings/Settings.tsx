@@ -28,10 +28,10 @@ export function Settings() {
   }, [load])
 
   return (
-    <div className="p-6 max-w-xl space-y-6">
+    <div className="p-4 sm:p-6 max-w-xl space-y-6 mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <SettingsIcon size={26} className="text-indigo-600" />
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <SettingsIcon size={24} className="text-indigo-600 shrink-0" />
           Settings
         </h1>
         <p className="text-slate-500 text-sm mt-1">Restaurant profile and plan (read-only for now).</p>

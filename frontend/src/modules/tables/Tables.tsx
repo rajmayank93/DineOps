@@ -83,36 +83,36 @@ export function Tables({ role }: Props) {
   }
 
   return (
-    <div className="p-6 max-w-5xl space-y-8">
+    <div className="p-4 sm:p-6 max-w-5xl space-y-8 mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Tables</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Tables</h1>
         <p className="text-slate-500 text-sm mt-1">Floor layout — labels must be unique per restaurant.</p>
       </div>
 
       {isAdmin(role) && (
-        <form onSubmit={handleAdd} className="bg-white rounded-lg shadow-card p-5 flex flex-wrap gap-3 items-end">
-          <div>
+        <form onSubmit={handleAdd} className="bg-white rounded-lg shadow-card p-4 sm:p-5 flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-end">
+          <div className="w-full sm:w-auto">
             <label className="block text-xs font-semibold text-slate-500 mb-1">Label</label>
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. T1, Patio 2"
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="rounded-lg border border-slate-200 px-3 py-2.5 sm:py-2 text-sm w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 min-h-11 sm:min-h-0"
             />
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block text-xs font-semibold text-slate-500 mb-1">Seats</label>
             <input
               type="number"
               min={1}
               value={capacity}
               onChange={(e) => setCapacity(Number(e.target.value))}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="rounded-lg border border-slate-200 px-3 py-2.5 sm:py-2 text-sm w-full sm:w-24 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 min-h-11 sm:min-h-0"
             />
           </div>
           <button
             type="submit"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold px-4 py-2 hover:bg-indigo-700"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold px-4 py-3 sm:py-2 hover:bg-indigo-700 touch-manipulation w-full sm:w-auto min-h-11 sm:min-h-0"
           >
             <Plus size={16} />
             Add table
@@ -122,13 +122,14 @@ export function Tables({ role }: Props) {
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
-      <div className="bg-white rounded-lg shadow-card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-card overflow-hidden -mx-4 sm:mx-0">
         {loading ? (
           <p className="p-8 text-sm text-slate-400">Loading…</p>
         ) : tables.length === 0 ? (
           <p className="p-8 text-sm text-slate-400">No tables yet.{isAdmin(role) ? ' Add one above.' : ''}</p>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto touch-pan-x">
+          <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
                 <th className="text-left px-4 py-2.5 font-semibold text-slate-500">Label</th>
@@ -162,6 +163,7 @@ export function Tables({ role }: Props) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
@@ -222,7 +224,7 @@ function TableRow({
           <select
             value={table.status}
             onChange={(e) => onStatusChange(table.id, e.target.value as typeof STATUSES[number])}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs capitalize bg-white"
+            className="rounded-lg border border-slate-200 px-2 py-2 sm:py-1 text-xs capitalize bg-white min-h-11 sm:min-h-0 w-full sm:w-auto touch-manipulation"
           >
             {STATUSES.map((s) => (
               <option key={s} value={s}>{s.replace('_', ' ')}</option>

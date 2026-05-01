@@ -88,7 +88,7 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg p-5 text-left w-full transition-all hover:shadow-card-md ${
+      className={`rounded-lg p-5 text-left w-full transition-all hover:shadow-card-md min-h-[3.25rem] sm:min-h-0 active:opacity-95 touch-manipulation ${
         primary
           ? 'bg-indigo-600 hover:bg-indigo-700 shadow-sm'
           : 'bg-white shadow-card hover:bg-slate-50'
@@ -210,9 +210,9 @@ export function Dashboard({ auth, onNavigate }: Props) {
   const firstName = auth.user.email.split('@')[0]
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
           {greeting},{' '}
           <span className="capitalize">{firstName}</span> 👋
         </h1>
@@ -234,7 +234,7 @@ export function Dashboard({ auth, onNavigate }: Props) {
       </div>
 
       <div className="bg-white rounded-lg shadow-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-semibold text-slate-900 text-[15px]">Recent orders</h2>
             <p className="text-xs text-slate-400 mt-0.5">Latest 5 across all tables</p>
@@ -242,7 +242,7 @@ export function Dashboard({ auth, onNavigate }: Props) {
           <button
             type="button"
             onClick={() => void load()}
-            className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors py-2 touch-manipulation min-h-11 sm:min-h-0 sm:py-0"
           >
             <RefreshCw size={12} />
             Refresh
@@ -254,9 +254,34 @@ export function Dashboard({ auth, onNavigate }: Props) {
             {Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} />)}
           </div>
         ) : recent.length === 0 ? (
-          <p className="p-8 text-sm text-slate-400 text-center">No orders yet.</p>
+          <p className="p-6 sm:p-8 text-sm text-slate-400 text-center">No orders yet.</p>
         ) : (
           <>
+            {/* Mobile: stacked cards */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {recent.map((order) => {
+                const cfg = statusCfg(order.status)
+                return (
+                  <div key={order.id} className="px-4 py-4 space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-mono text-sm font-semibold text-slate-800">#{order.shortId}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${cfg.className}`}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600">{order.tableLabel}</p>
+                    <p className="text-xs text-slate-500 line-clamp-2">{order.itemsSummary}</p>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-semibold tabular-nums">{formatInr(order.total)}</span>
+                      <span className="text-xs text-slate-400">{formatRelativeTime(order.createdAt)}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop: table row layout */}
+            <div className="hidden md:block">
             <div className="px-6 py-2.5 grid grid-cols-[88px_88px_1fr_88px_128px_72px] gap-4 border-b border-slate-100 bg-slate-50">
               {['Order', 'Table', 'Items', 'Total', 'Status', 'Time'].map((h) => (
                 <span key={h} className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
@@ -288,11 +313,13 @@ export function Dashboard({ auth, onNavigate }: Props) {
               )
             })}
 
-            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+            </div>
+
+            <div className="px-4 sm:px-6 py-3 border-t border-slate-100 bg-slate-50/50">
               <button
                 type="button"
                 onClick={() => onNavigate('orders')}
-                className="flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                className="flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors py-2 touch-manipulation min-h-11 sm:min-h-0"
               >
                 View all orders <ArrowRight size={14} />
               </button>
